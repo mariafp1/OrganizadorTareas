@@ -231,7 +231,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .column-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .column-head h2 { margin: 0; font-size: 15px; }
-.column-head .count {
+.column-head .count,
+.half-head .count {
   margin-right: auto;
   padding: 0 8px;
   border-radius: 999px;
@@ -253,6 +254,37 @@ button, input, select, textarea { font: inherit; color: inherit; }
   gap: 10px;
 }
 .column-list .empty { grid-column: 1 / -1; }
+
+.column-halves {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.half {
+  padding: 10px;
+  border-radius: 10px;
+  border: 2px dashed transparent;
+  background: var(--bg);
+  transition: border-color .15s, background .15s;
+}
+.half-urgent { background: var(--pr-alta-bg); background: color-mix(in srgb, var(--pr-alta-bg) 55%, var(--bg)); }
+.half.drop-target { border-color: var(--accent); background: var(--accent-soft); }
+.half-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.half-urgent .half-head { color: var(--pr-alta); }
+.half-head .count { margin-right: auto; }
+.half .column-list { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+
+.check-field { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.check-field input { width: 16px; height: 16px; accent-color: var(--accent); }
+.check-field em { font-style: normal; color: var(--muted); font-size: 13px; }
 
 .card {
   position: relative;
@@ -437,6 +469,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .app-main { padding: 16px; }
   .board-head h1 { font-size: 22px; }
   .toolbar { gap: 8px; }
+  .column-halves { grid-template-columns: 1fr; }
   .person-head { flex-wrap: wrap; }
   .person-info { flex-basis: calc(100% - 52px); }
   .progress { flex: 1; }

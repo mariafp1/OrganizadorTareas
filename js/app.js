@@ -24,6 +24,8 @@
   const PRIORITY_ORDER = { alta: 0, media: 1, baja: 2 };
   const PRIORITY_LABEL = { alta: 'Alta', media: 'Media', baja: 'Baja' };
   const UNASSIGNED = '__none__';
+  // Bloques divididos en menos urgente (izquierda) y más urgente (derecha).
+  const SPLIT_STATUSES = ['pendiente', 'en-curso'];
 
   const ui = Store.loadUI();
   const boards = {};
@@ -192,26 +194,52 @@
     kanban.replaceChildren(
       ...STATUSES.map((status) => {
         const colTasks = tasks.filter((t) => t.status === status.id).sort(compareTasks);
-        const list = el('div', { class: 'column-list', 'data-status': status.id },
-          colTasks.length ? colTasks.map(taskCard) : [el('p', { class: 'empty', text: 'Sin tareas' })]);
+        const split = SPLIT_STATUSES.includes(status.id);
 
-        const column = el('div', { class: 'column', 'data-status': status.id }, [
+        const column = el('div', { class: 'column' + (split ? ' is-split' : ''), 'data-status': status.id }, [
           el('header', { class: 'column-head' }, [
             el('span', { class: 'status-dot status-' + status.id }),
             el('h2', { text: status.name }),
             el('span', { class: 'count', text: String(colTasks.length) }),
-            el('button', {
+            split ? null : el('button', {
               class: 'icon-btn', type: 'button', title: 'Añadir tarea en ' + status.name,
               'aria-label': 'Añadir tarea en ' + status.name,
               onclick: () => openTaskDialog(null, { status: status.id }),
             }, ['+']),
           ]),
-          list,
+          split
+            ? el('div', { class: 'column-halves' }, [false, true].map((urgent) =>
+              urgencyHalf(status, urgent, colTasks.filter((t) => !!t.urgent === urgent))))
+            : cardList(colTasks),
         ]);
-        setupDropZone(column, status.id);
+        if (!split) setupDropZone(column, status.id);
         return column;
       }),
     );
+  }
+
+  function cardList(list) {
+    return el('div', { class: 'column-list' },
+      list.length ? list.map(taskCard) : [el('p', { class: 'empty', text: 'Sin tareas' })]);
+  }
+
+  // Mitad izquierda (menos urgente) o derecha (más urgente) de un bloque.
+  function urgencyHalf(status, urgent, list) {
+    const label = urgent ? 'Más urgente' : 'Menos urgente';
+    const half = el('div', { class: 'half ' + (urgent ? 'half-urgent' : 'half-normal') }, [
+      el('header', { class: 'half-head' }, [
+        el('span', { text: (urgent ? '🔥 ' : '') + label }),
+        el('span', { class: 'count', text: String(list.length) }),
+        el('button', {
+          class: 'icon-btn', type: 'button', title: `Añadir tarea en ${status.name} (${label.toLowerCase()})`,
+          'aria-label': `Añadir tarea en ${status.name} (${label.toLowerCase()})`,
+          onclick: () => openTaskDialog(null, { status: status.id, urgent }),
+        }, ['+']),
+      ]),
+      cardList(list),
+    ]);
+    setupDropZone(half, status.id, urgent);
+    return half;
   }
 
   function taskCard(t) {
@@ -266,7 +294,7 @@
     t.updatedAt = new Date().toISOString();
   }
 
-  function setupDropZone(column, statusId) {
+  function setupDropZone(column, statusId, urgent) {
     column.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
@@ -279,11 +307,14 @@
       e.preventDefault();
       column.classList.remove('drop-target');
       const t = board().tasks.find((x) => x.id === e.dataTransfer.getData('text/plain'));
-      if (t && t.status !== statusId) {
-        setStatus(t, statusId);
+      const moveUrgency = urgent != null && t && !!t.urgent !== urgent;
+      if (t && (t.status !== statusId || moveUrgency)) {
+        if (urgent != null) t.urgent = urgent;
+        if (t.status !== statusId) setStatus(t, statusId);
+        else t.updatedAt = new Date().toISOString();
         save();
         render();
-        if (statusId === 'bloqueado') openTaskDialog(t, null, 'blockedReason');
+        if (statusId === 'bloqueado' && !moveUrgency) openTaskDialog(t, null, 'blockedReason');
       }
     });
   }
@@ -372,6 +403,7 @@
         },
       }),
       el('span', { class: 'person-task-title' }, [
+        t.urgent && SPLIT_STATUSES.includes(t.status) ? el('span', { class: 'urgent-mark', title: 'Más urgente', text: '🔥 ' }) : null,
         t.title,
         t.status === 'bloqueado' && t.blockedReason
           ? el('span', { class: 'blocked-reason inline', text: '⛔ ' + t.blockedReason }) : null,
@@ -401,7 +433,7 @@
     let defaultAssignee = me().id;
     if (filters.member && filters.member !== UNASSIGNED && ui.scope !== 'mine') defaultAssignee = filters.member;
     const values = Object.assign(
-      { title: '', description: '', assigneeId: defaultAssignee, status: 'pendiente', priority: 'media', dueDate: '', blockedReason: '' },
+      { title: '', description: '', assigneeId: defaultAssignee, status: 'pendiente', priority: 'media', dueDate: '', blockedReason: '', urgent: false },
       defaults,
       t,
     );
@@ -412,6 +444,7 @@
     f.priority.value = values.priority;
     f.dueDate.value = values.dueDate;
     f.blockedReason.value = values.blockedReason || '';
+    f.urgent.checked = !!values.urgent;
     syncBlockedReasonField();
 
     $('#task-dialog-title').textContent = t ? 'Editar tarea' : 'Nueva tarea · ' + BOARD_CONFIG[ui.activeBoard].title;
@@ -422,6 +455,7 @@
 
   function syncBlockedReasonField() {
     $('#blocked-reason-field').hidden = taskForm.elements.status.value !== 'bloqueado';
+    $('#urgent-field').hidden = !SPLIT_STATUSES.includes(taskForm.elements.status.value);
   }
 
   taskForm.elements.status.addEventListener('change', () => {
@@ -444,6 +478,7 @@
       status: f.status.value,
       priority: f.priority.value,
       dueDate: f.dueDate.value,
+      urgent: f.urgent.checked,
       blockedReason: f.status.value === 'bloqueado' ? f.blockedReason.value.trim() : '',
       updatedAt: new Date().toISOString(),
     };

@@ -56,11 +56,11 @@
         id: 'trabajo',
         members: [me, ana, luis, marta],
         tasks: [
-          task('Preparar presentación trimestral', me.id, 'en-curso', 'alta', 2, 'Resultados del Q3 y objetivos del Q4.'),
+          Object.assign(task('Preparar presentación trimestral', me.id, 'en-curso', 'alta', 2, 'Resultados del Q3 y objetivos del Q4.'), { urgent: true }),
           task('Revisar propuesta de cliente', me.id, 'pendiente', 'media', 5),
           task('Responder correos pendientes', me.id, 'hecho', 'baja', -1),
           task('Actualizar documentación de la API', ana.id, 'en-curso', 'media', 4),
-          task('Corregir error en el formulario de alta', luis.id, 'pendiente', 'alta', -1, 'Los usuarios no reciben el correo de confirmación.'),
+          Object.assign(task('Corregir error en el formulario de alta', luis.id, 'pendiente', 'alta', -1, 'Los usuarios no reciben el correo de confirmación.'), { urgent: true }),
           task('Planificar sprint siguiente', marta.id, 'pendiente', 'media', 7),
           Object.assign(task('Migrar base de datos de pruebas', ana.id, 'bloqueado', 'alta', 3), { blockedReason: 'Esperando acceso al servidor por parte de sistemas.' }),
           task('Entrevista candidato frontend', marta.id, 'hecho', 'media', -3),
@@ -73,7 +73,7 @@
       members: [me],
       tasks: [
         task('Hacer la compra', me.id, 'pendiente', 'media', 0),
-        task('Pedir cita con el médico', me.id, 'pendiente', 'alta', 3),
+        Object.assign(task('Pedir cita con el médico', me.id, 'pendiente', 'alta', 3), { urgent: true }),
         task('Leer 30 páginas del libro', me.id, 'en-curso', 'baja', null),
         task('Pagar el recibo de la luz', me.id, 'hecho', 'alta', -2),
       ],
