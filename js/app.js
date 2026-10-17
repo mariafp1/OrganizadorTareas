@@ -24,7 +24,7 @@
   const PRIORITY_ORDER = { alta: 0, media: 1, baja: 2 };
   const PRIORITY_LABEL = { alta: 'Alta', media: 'Media', baja: 'Baja' };
   const UNASSIGNED = '__none__';
-  // Bloques divididos en menos urgente (izquierda) y más urgente (derecha).
+  // Bloques divididos en más urgente (izquierda) y menos urgente (derecha).
   const SPLIT_STATUSES = ['pendiente', 'en-curso'];
 
   const ui = Store.loadUI();
@@ -208,7 +208,7 @@
             }, ['+']),
           ]),
           split
-            ? el('div', { class: 'column-halves' }, [false, true].map((urgent) =>
+            ? el('div', { class: 'column-halves' }, [true, false].map((urgent) =>
               urgencyHalf(status, urgent, colTasks.filter((t) => !!t.urgent === urgent))))
             : cardList(colTasks),
         ]);
@@ -223,12 +223,12 @@
       list.length ? list.map(taskCard) : [el('p', { class: 'empty', text: 'Sin tareas' })]);
   }
 
-  // Mitad izquierda (menos urgente) o derecha (más urgente) de un bloque.
+  // Mitad izquierda (más urgente) o derecha (menos urgente) de un bloque.
   function urgencyHalf(status, urgent, list) {
     const label = urgent ? 'Más urgente' : 'Menos urgente';
     const half = el('div', { class: 'half ' + (urgent ? 'half-urgent' : 'half-normal') }, [
       el('header', { class: 'half-head' }, [
-        el('span', { text: (urgent ? '🔥 ' : '') + label }),
+        el('span', { text: label }),
         el('span', { class: 'count', text: String(list.length) }),
         el('button', {
           class: 'icon-btn', type: 'button', title: `Añadir tarea en ${status.name} (${label.toLowerCase()})`,
@@ -262,10 +262,10 @@
       el('h3', { class: 'card-title', text: t.title }),
       t.description ? el('p', { class: 'card-desc', text: t.description }) : null,
       t.status === 'bloqueado' && t.blockedReason
-        ? el('p', { class: 'blocked-reason', text: '⛔ ' + t.blockedReason }) : null,
+        ? el('p', { class: 'blocked-reason', text: t.blockedReason }) : null,
       el('footer', { class: 'card-meta' }, [
         el('span', { class: 'tag tag-' + t.priority, text: PRIORITY_LABEL[t.priority] }),
-        t.dueDate ? el('span', { class: 'due' + (overdue ? ' overdue' : ''), title: t.dueDate, text: '📅 ' + formatDue(t.dueDate) }) : null,
+        t.dueDate ? el('span', { class: 'due' + (overdue ? ' overdue' : ''), title: t.dueDate, text: formatDue(t.dueDate) }) : null,
         el('span', { class: 'spacer' }),
         el('span', { class: 'assignee' + (member ? '' : ' assignee-empty') }, [
           avatar(member, 'sm'),
@@ -403,10 +403,10 @@
         },
       }),
       el('span', { class: 'person-task-title' }, [
-        t.urgent && SPLIT_STATUSES.includes(t.status) ? el('span', { class: 'urgent-mark', title: 'Más urgente', text: '🔥 ' }) : null,
+        t.urgent && SPLIT_STATUSES.includes(t.status) ? el('span', { class: 'urgent-mark', text: 'Urgente' }) : null,
         t.title,
         t.status === 'bloqueado' && t.blockedReason
-          ? el('span', { class: 'blocked-reason inline', text: '⛔ ' + t.blockedReason }) : null,
+          ? el('span', { class: 'blocked-reason inline', text: t.blockedReason }) : null,
       ]),
       el('span', { class: 'status-pill status-pill-' + t.status, text: statusName }),
       el('span', { class: 'tag tag-' + t.priority, text: PRIORITY_LABEL[t.priority] }),
