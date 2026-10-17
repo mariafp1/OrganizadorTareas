@@ -237,7 +237,10 @@
         el('span', { class: 'tag tag-' + t.priority, text: PRIORITY_LABEL[t.priority] }),
         t.dueDate ? el('span', { class: 'due' + (overdue ? ' overdue' : ''), title: t.dueDate, text: '📅 ' + formatDue(t.dueDate) }) : null,
         el('span', { class: 'spacer' }),
-        avatar(member),
+        el('span', { class: 'assignee' + (member ? '' : ' assignee-empty') }, [
+          avatar(member, 'sm'),
+          el('span', { class: 'assignee-name', text: member ? displayName(member) : 'Sin asignar' }),
+        ]),
       ]),
     ]);
     return card;

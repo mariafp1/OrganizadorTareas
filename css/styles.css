@@ -303,6 +303,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
   flex: none;
 }
 .avatar-lg { width: 40px; height: 40px; font-size: 15px; }
+.avatar-sm { width: 20px; height: 20px; font-size: 9px; }
+
+.assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 55%;
+  min-width: 0;
+  padding: 2px 8px 2px 2px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.assignee-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assignee-empty { color: var(--muted); font-weight: 500; }
 .avatar-empty { background: var(--surface-2); color: var(--muted); border: 1px dashed var(--muted); }
 
 .empty { margin: 8px 0; color: var(--muted); font-size: 13px; text-align: center; }
