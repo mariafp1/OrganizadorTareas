@@ -86,6 +86,7 @@ Cuando ya tengas tu cuenta creada, puedes impedir que otras personas se registre
 1. En Supabase, ve a **Authentication** → **Sign In / Providers** (o **Providers** → **Email**).
 2. Desactiva **Allow new users to sign up**.
 3. Guarda.
+4. En `js/config.js`, pon `allowSignup: false` para que la web deje de mostrar la opción "Crear una".
 
 Tú podrás seguir entrando con normalidad.
 

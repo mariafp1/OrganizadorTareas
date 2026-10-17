@@ -738,7 +738,8 @@
     if (cfg.password) $('#auth-password-label').textContent = cfg.password;
     f.password.autocomplete = mode === 'login' ? 'current-password' : 'new-password';
     f.password.value = '';
-    $('#auth-switch').hidden = !cfg.switchTo;
+    const signupAllowed = (window.APP_CONFIG.supabase || {}).allowSignup !== false;
+    $('#auth-switch').hidden = !cfg.switchTo || (cfg.switchTo === 'signup' && !signupAllowed);
     $('#auth-switch').textContent = cfg.switchText || '';
     $('#auth-forgot').hidden = mode !== 'login';
     setAuthMessage(message || '');
