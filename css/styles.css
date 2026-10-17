@@ -215,17 +215,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* ---------- Kanban ---------- */
 
 .kanban {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: start;
 }
 
 .column {
   background: var(--surface-2);
   border-radius: var(--radius);
   padding: 12px;
-  min-height: 200px;
   border: 2px dashed transparent;
   transition: border-color .15s, background .15s;
 }
@@ -248,7 +246,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .status-bloqueado { background: var(--st-bloqueado); }
 .status-hecho { background: var(--st-hecho); }
 
-.column-list { display: flex; flex-direction: column; gap: 10px; }
+.column-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-items: start;
+  gap: 10px;
+}
+.column-list .empty { grid-column: 1 / -1; }
 
 .card {
   position: relative;
@@ -290,6 +294,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tag-media { background: var(--pr-media-bg); color: var(--pr-media); }
 .tag-baja { background: var(--pr-baja-bg); color: var(--pr-baja); }
 
+.blocked-reason {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--pr-alta-bg);
+  color: var(--pr-alta);
+  font-size: 12px;
+}
+.blocked-reason.inline { margin: 0 0 0 8px; padding: 1px 6px; }
+.field em { font-style: normal; opacity: .8; }
+
 .due { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .due.overdue { color: var(--overdue); font-weight: 600; }
 
@@ -321,7 +336,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .assignee-empty { color: var(--muted); font-weight: 500; }
 .avatar-empty { background: var(--surface-2); color: var(--muted); border: 1px dashed var(--muted); }
 
-.empty { margin: 8px 0; color: var(--muted); font-size: 13px; text-align: center; }
+.empty { margin: 4px 0 8px; color: var(--muted); font-size: 13px; text-align: center; }
 .empty.big { padding: 40px 0; font-size: 15px; }
 
 /* ---------- Vista por persona ---------- */
@@ -413,14 +428,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ---------- Responsive ---------- */
 
-@media (max-width: 1100px) {
-  .kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 640px) {
-  .kanban { grid-template-columns: 1fr; }
-  .column { min-height: 0; }
-}
 
 @media (max-width: 640px) {
   .app-header { padding: 10px 16px; gap: 8px; }

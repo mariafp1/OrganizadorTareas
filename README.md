@@ -7,7 +7,7 @@ Web para organizar tareas de **trabajo** y **personales** en dos tablones comple
 - **Dos tablones independientes**: Trabajo y Personal. Cada uno tiene sus propias tareas y sus propias personas; nada se comparte entre ellos.
 - **Mis tareas / Del equipo / Todas**: filtra rápidamente lo que te toca a ti o lo que tiene tu equipo.
 - **Dos vistas**:
-  - *Tablero*: columnas Pendiente · En curso · Bloqueado · Hecho. Arrastra las tarjetas para cambiar su estado.
+  - *Tablero*: bloques Pendiente · En curso · Bloqueado · Hecho, uno debajo de otro. Arrastra las tarjetas para cambiar su estado. Las tareas bloqueadas pueden llevar un motivo opcional.
   - *Por persona*: cada miembro con sus tareas, recuento por estado, tareas vencidas y porcentaje completado.
 - **Tareas** con título, descripción, persona asignada, estado, prioridad (alta/media/baja) y fecha límite. Las vencidas se marcan en rojo.
 - **Gestión del equipo** (botón 👥): añadir, renombrar o quitar personas de cada tablón.

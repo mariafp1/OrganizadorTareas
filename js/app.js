@@ -122,7 +122,7 @@
         if (filters.member === UNASSIGNED ? t.assigneeId : t.assigneeId !== filters.member) return false;
       }
       if (filters.priority && t.priority !== filters.priority) return false;
-      if (q && !(t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q))) return false;
+      if (q && ![t.title, t.description, t.blockedReason || ''].some((s) => s.toLowerCase().includes(q))) return false;
       return true;
     });
   }
@@ -233,6 +233,8 @@
     }, [
       el('h3', { class: 'card-title', text: t.title }),
       t.description ? el('p', { class: 'card-desc', text: t.description }) : null,
+      t.status === 'bloqueado' && t.blockedReason
+        ? el('p', { class: 'blocked-reason', text: '⛔ ' + t.blockedReason }) : null,
       el('footer', { class: 'card-meta' }, [
         el('span', { class: 'tag tag-' + t.priority, text: PRIORITY_LABEL[t.priority] }),
         t.dueDate ? el('span', { class: 'due' + (overdue ? ' overdue' : ''), title: t.dueDate, text: '📅 ' + formatDue(t.dueDate) }) : null,
@@ -258,6 +260,12 @@
     });
   }
 
+  function setStatus(t, statusId) {
+    t.status = statusId;
+    if (statusId !== 'bloqueado') t.blockedReason = '';
+    t.updatedAt = new Date().toISOString();
+  }
+
   function setupDropZone(column, statusId) {
     column.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -272,10 +280,10 @@
       column.classList.remove('drop-target');
       const t = board().tasks.find((x) => x.id === e.dataTransfer.getData('text/plain'));
       if (t && t.status !== statusId) {
-        t.status = statusId;
-        t.updatedAt = new Date().toISOString();
+        setStatus(t, statusId);
         save();
         render();
+        if (statusId === 'bloqueado') openTaskDialog(t, null, 'blockedReason');
       }
     });
   }
@@ -358,13 +366,16 @@
         'aria-label': 'Marcar como hecha',
         onclick: (e) => e.stopPropagation(),
         onchange: (e) => {
-          t.status = e.target.checked ? 'hecho' : 'pendiente';
-          t.updatedAt = new Date().toISOString();
+          setStatus(t, e.target.checked ? 'hecho' : 'pendiente');
           save();
           render();
         },
       }),
-      el('span', { class: 'person-task-title', text: t.title }),
+      el('span', { class: 'person-task-title' }, [
+        t.title,
+        t.status === 'bloqueado' && t.blockedReason
+          ? el('span', { class: 'blocked-reason inline', text: '⛔ ' + t.blockedReason }) : null,
+      ]),
       el('span', { class: 'status-pill status-pill-' + t.status, text: statusName }),
       el('span', { class: 'tag tag-' + t.priority, text: PRIORITY_LABEL[t.priority] }),
       el('span', { class: 'due' + (isOverdue(t) ? ' overdue' : ''), text: t.dueDate ? formatDue(t.dueDate) : '—' }),
@@ -377,7 +388,7 @@
   const taskForm = $('#task-form');
   let editingId = null;
 
-  function openTaskDialog(t, defaults) {
+  function openTaskDialog(t, defaults, focusField) {
     editingId = t ? t.id : null;
     const f = taskForm.elements;
 
@@ -390,7 +401,7 @@
     let defaultAssignee = me().id;
     if (filters.member && filters.member !== UNASSIGNED && ui.scope !== 'mine') defaultAssignee = filters.member;
     const values = Object.assign(
-      { title: '', description: '', assigneeId: defaultAssignee, status: 'pendiente', priority: 'media', dueDate: '' },
+      { title: '', description: '', assigneeId: defaultAssignee, status: 'pendiente', priority: 'media', dueDate: '', blockedReason: '' },
       defaults,
       t,
     );
@@ -400,12 +411,23 @@
     f.status.value = values.status;
     f.priority.value = values.priority;
     f.dueDate.value = values.dueDate;
+    f.blockedReason.value = values.blockedReason || '';
+    syncBlockedReasonField();
 
     $('#task-dialog-title').textContent = t ? 'Editar tarea' : 'Nueva tarea · ' + BOARD_CONFIG[ui.activeBoard].title;
     $('#btn-delete-task').hidden = !t;
     taskDialog.showModal();
-    f.title.focus();
+    f[focusField || 'title'].focus();
   }
+
+  function syncBlockedReasonField() {
+    $('#blocked-reason-field').hidden = taskForm.elements.status.value !== 'bloqueado';
+  }
+
+  taskForm.elements.status.addEventListener('change', () => {
+    syncBlockedReasonField();
+    if (taskForm.elements.status.value === 'bloqueado') taskForm.elements.blockedReason.focus();
+  });
 
   taskForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -422,6 +444,7 @@
       status: f.status.value,
       priority: f.priority.value,
       dueDate: f.dueDate.value,
+      blockedReason: f.status.value === 'bloqueado' ? f.blockedReason.value.trim() : '',
       updatedAt: new Date().toISOString(),
     };
     if (editingId) {
