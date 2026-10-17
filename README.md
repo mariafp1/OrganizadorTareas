@@ -14,7 +14,6 @@ Web para organizar tareas de **trabajo** y **personales** en dos tablones comple
 - Filtros por persona y prioridad, y buscador.
 - Atajo de teclado: `n` para crear una tarea nueva.
 - Diseño adaptable a móvil y modo oscuro automático.
-
 - **Cuenta con email y contraseña**: tus tareas se guardan en la nube (Supabase) y las ves desde cualquier dispositivo.
 
 ## Publicarla
