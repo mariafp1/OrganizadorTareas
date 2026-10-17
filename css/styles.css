@@ -9,6 +9,7 @@
   --overdue: #dc2626;
   --st-pendiente: #94a3b8;
   --st-en-curso: #f59e0b;
+  --st-bloqueado: #ef4444;
   --st-hecho: #10b981;
   --pr-alta-bg: #fee2e2;
   --pr-alta: #b91c1c;
@@ -215,7 +216,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .kanban {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -244,6 +245,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; }
 .status-pendiente { background: var(--st-pendiente); }
 .status-en-curso { background: var(--st-en-curso); }
+.status-bloqueado { background: var(--st-bloqueado); }
 .status-hecho { background: var(--st-hecho); }
 
 .column-list { display: flex; flex-direction: column; gap: 10px; }
@@ -345,6 +347,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .status-pill { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
 .status-pill-en-curso { color: var(--pr-media); background: var(--pr-media-bg); }
+.status-pill-bloqueado { color: var(--pr-alta); background: var(--pr-alta-bg); }
 .status-pill-hecho { color: var(--st-hecho); }
 
 /* ---------- Diálogos ---------- */
@@ -394,7 +397,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ---------- Responsive ---------- */
 
-@media (max-width: 860px) {
+@media (max-width: 1100px) {
+  .kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
   .kanban { grid-template-columns: 1fr; }
   .column { min-height: 0; }
 }

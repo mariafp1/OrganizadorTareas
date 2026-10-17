@@ -14,6 +14,7 @@
   const STATUSES = [
     { id: 'pendiente', name: 'Pendiente' },
     { id: 'en-curso', name: 'En curso' },
+    { id: 'bloqueado', name: 'Bloqueado' },
     { id: 'hecho', name: 'Hecho' },
   ];
 
@@ -61,6 +62,7 @@
           task('Actualizar documentación de la API', ana.id, 'en-curso', 'media', 4),
           task('Corregir error en el formulario de alta', luis.id, 'pendiente', 'alta', -1, 'Los usuarios no reciben el correo de confirmación.'),
           task('Planificar sprint siguiente', marta.id, 'pendiente', 'media', 7),
+          task('Migrar base de datos de pruebas', ana.id, 'bloqueado', 'alta', 3, 'Esperando acceso al servidor por parte de sistemas.'),
           task('Entrevista candidato frontend', marta.id, 'hecho', 'media', -3),
         ],
       };

@@ -181,6 +181,8 @@
       `${mine.length} ${mine.length === 1 ? 'tarea abierta tuya' : 'tareas abiertas tuyas'}`,
       `${open.length} abiertas en total`,
     ];
+    const blocked = open.filter((t) => t.status === 'bloqueado');
+    if (blocked.length) parts.push(`${blocked.length} ${blocked.length === 1 ? 'bloqueada' : 'bloqueadas'}`);
     if (overdue.length) parts.push(`${overdue.length} ${overdue.length === 1 ? 'vencida' : 'vencidas'}`);
     $('#board-summary').textContent = parts.join(' · ');
   }
