@@ -15,39 +15,47 @@ Web para organizar tareas de **trabajo** y **personales** en dos tablones comple
 - Atajo de teclado: `n` para crear una tarea nueva.
 - Diseño adaptable a móvil y modo oscuro automático.
 
-## Cómo usarla
+- **Cuenta con email y contraseña**: tus tareas se guardan en la nube (Supabase) y las ves desde cualquier dispositivo.
 
-No necesita instalación ni compilación: abre `index.html` en el navegador.
+## Publicarla
 
-También puedes servirla en local:
+Sigue la guía paso a paso: **[docs/PUBLICAR.md](docs/PUBLICAR.md)** (Supabase para los datos y Vercel para la web).
+
+## Probarla en local
+
+No necesita instalación ni compilación. Con `js/config.js` vacío funciona en *modo local*
+(los datos se guardan solo en el navegador):
 
 ```bash
 python3 -m http.server 8000
 # y abre http://localhost:8000
 ```
 
-La primera vez se cargan unos datos de ejemplo para que veas cómo funciona.
-
 ## Datos
 
-En esta versión los datos se guardan en el `localStorage` del navegador, en una clave distinta por tablón
-(`organizador:v1:board:trabajo` y `organizador:v1:board:personal`). Esto significa que:
-
-- Los datos se quedan en tu navegador y dispositivo.
-- Tu equipo todavía no ve las tareas desde su ordenador: la lista de "equipo" la gestionas tú.
+- **Con Supabase configurado**: cada usuario inicia sesión y sus personas y tareas se guardan en las
+  tablas `members` y `tasks`. Las políticas de seguridad (RLS) de [`supabase/schema.sql`](supabase/schema.sql)
+  impiden que una cuenta vea o modifique los datos de otra. Los tablones se distinguen por la columna `board`.
+- **Modo local**: los datos se guardan en el `localStorage` del navegador, con una clave por tablón.
 
 ## Estructura
 
 ```
-index.html        Estructura de la página y diálogos
-css/styles.css    Estilos (tema claro/oscuro, responsive)
-js/store.js       Carga y guardado de cada tablón por separado + datos de ejemplo
-js/app.js         Interfaz: filtros, vistas, arrastrar y soltar, edición
+index.html                 Estructura de la página, inicio de sesión y diálogos
+css/styles.css             Estilos (tema claro/oscuro, responsive)
+js/config.js               URL y clave pública de Supabase
+js/store.js                Guardado de datos: Supabase o modo local
+js/app.js                  Interfaz: filtros, vistas, arrastrar y soltar, edición, inicio de sesión
+js/vendor/                 Librería de Supabase (supabase-js 2.117.1, licencia MIT)
+supabase/schema.sql        Tablas y reglas de seguridad de la base de datos
+vercel.json                Cabeceras de seguridad y caché para Vercel
+docs/PUBLICAR.md           Guía para publicar la web
 ```
 
 ## Próximos pasos posibles
 
-- Backend y cuentas de usuario para compartir el tablón de trabajo con el equipo en tiempo real.
+- Compartir el tablón de trabajo con el equipo (que cada persona entre con su cuenta y vea sus tareas).
+- Sincronización en tiempo real entre dispositivos abiertos a la vez (ahora se actualiza al volver a la pestaña).
 - Exportar / importar datos.
 - Etiquetas, subtareas y comentarios.
 - Vista de calendario por fechas límite.

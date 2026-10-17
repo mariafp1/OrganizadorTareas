@@ -7,6 +7,35 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body data-board="trabajo">
+  <div id="loading" class="loading" role="status">Cargando…</div>
+
+  <!-- Inicio de sesión (solo con Supabase configurado) -->
+  <section id="auth-screen" class="auth-screen" hidden>
+    <form id="auth-form" class="auth-card" novalidate>
+      <div class="brand auth-brand">
+        <span class="brand-mark" aria-hidden="true">✓</span>
+        <span class="brand-name">Organizador</span>
+      </div>
+      <h1 id="auth-title">Iniciar sesión</h1>
+      <p class="hint" id="auth-hint">Entra para ver tus tareas desde cualquier dispositivo.</p>
+      <label class="field" id="auth-email-field">
+        <span>Email</span>
+        <input type="email" name="email" autocomplete="email" required>
+      </label>
+      <label class="field" id="auth-password-field">
+        <span id="auth-password-label">Contraseña</span>
+        <input type="password" name="password" autocomplete="current-password" minlength="6" required>
+      </label>
+      <p class="auth-message" id="auth-message" role="alert" hidden></p>
+      <button type="submit" class="btn btn-primary btn-block" id="auth-submit">Entrar</button>
+      <div class="auth-links">
+        <button type="button" class="link-btn" id="auth-switch">¿No tienes cuenta? Crear una</button>
+        <button type="button" class="link-btn" id="auth-forgot">¿Has olvidado la contraseña?</button>
+      </div>
+    </form>
+  </section>
+
+  <div id="app-shell" hidden>
   <header class="app-header">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">✓</span>
@@ -18,8 +47,16 @@
     </nav>
     <div class="header-actions">
       <button class="btn btn-ghost" id="btn-members" type="button"><span id="members-label">Equipo</span></button>
+      <div class="user-menu" id="user-menu" hidden>
+        <span class="user-email" id="user-email"></span>
+        <button class="btn btn-ghost" id="btn-logout" type="button">Salir</button>
+      </div>
     </div>
   </header>
+
+  <p class="local-banner" id="local-banner" hidden>
+    Modo local: las tareas se guardan solo en este navegador. Configura Supabase en <code>js/config.js</code> para tenerlas en todos tus dispositivos.
+  </p>
 
   <main class="app-main">
     <section class="board-head">
@@ -59,6 +96,9 @@
     <section id="kanban" class="kanban" aria-label="Tablero de tareas"></section>
     <section id="people" class="people" aria-label="Tareas por persona" hidden></section>
   </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
 
   <!-- Modal de tarea -->
   <dialog id="task-dialog" class="dialog">
@@ -130,6 +170,8 @@
     </form>
   </dialog>
 
+  <script src="js/vendor/supabase-2.117.1.js"></script>
+  <script src="js/config.js"></script>
   <script src="js/store.js"></script>
   <script src="js/app.js"></script>
 </body>

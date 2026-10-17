@@ -28,9 +28,11 @@
   const SPLIT_STATUSES = ['pendiente', 'en-curso'];
 
   const ui = Store.loadUI();
-  const boards = {};
-  Store.BOARD_IDS.forEach((id) => { boards[id] = Store.loadBoard(id); });
-  if (!boards[ui.activeBoard]) ui.activeBoard = 'trabajo';
+  if (!Store.BOARD_IDS.includes(ui.activeBoard)) ui.activeBoard = 'trabajo';
+
+  let backend;
+  let boards = null;
+  let currentUser = null;
 
   // Filtros que no se guardan entre sesiones.
   const filters = { member: '', priority: '', search: '' };
@@ -63,8 +65,29 @@
     return boards[ui.activeBoard];
   }
 
-  function save() {
-    Store.saveBoard(board());
+  let toastTimer = null;
+  function toast(message) {
+    const node = $('#toast');
+    node.textContent = message;
+    node.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { node.hidden = true; }, 5000);
+  }
+
+  // Los cambios se muestran al momento y se guardan en segundo plano. Si el
+  // guardado falla, se avisa y se recargan los datos reales.
+  function persist(promise) {
+    promise.catch((err) => {
+      console.error(err);
+      toast('No se ha podido guardar el cambio. Revisa tu conexión; se han recargado los datos.');
+      refresh();
+    });
+  }
+
+  function pick(obj, keys) {
+    const out = {};
+    keys.forEach((k) => { out[k] = obj[k]; });
+    return out;
   }
 
   function me() {
@@ -312,7 +335,7 @@
         if (urgent != null) t.urgent = urgent;
         if (t.status !== statusId) setStatus(t, statusId);
         else t.updatedAt = new Date().toISOString();
-        save();
+        persist(backend.updateTask(t.id, pick(t, ['status', 'urgent', 'blockedReason', 'updatedAt'])));
         render();
         if (statusId === 'bloqueado' && !moveUrgency) openTaskDialog(t, null, 'blockedReason');
       }
@@ -398,7 +421,7 @@
         onclick: (e) => e.stopPropagation(),
         onchange: (e) => {
           setStatus(t, e.target.checked ? 'hecho' : 'pendiente');
-          save();
+          persist(backend.updateTask(t.id, pick(t, ['status', 'blockedReason', 'updatedAt'])));
           render();
         },
       }),
@@ -482,12 +505,15 @@
       blockedReason: f.status.value === 'bloqueado' ? f.blockedReason.value.trim() : '',
       updatedAt: new Date().toISOString(),
     };
-    if (editingId) {
-      Object.assign(board().tasks.find((x) => x.id === editingId), data);
+    const existing = editingId && board().tasks.find((x) => x.id === editingId);
+    if (existing) {
+      Object.assign(existing, data);
+      persist(backend.updateTask(existing.id, data));
     } else {
-      board().tasks.push(Object.assign({ id: Store.uid(), createdAt: data.updatedAt }, data));
+      const created = Object.assign({ id: Store.uid(), createdAt: data.updatedAt }, data);
+      board().tasks.push(created);
+      persist(backend.insertTask(ui.activeBoard, created));
     }
-    save();
     taskDialog.close();
     render();
   });
@@ -495,8 +521,8 @@
   $('#btn-delete-task').addEventListener('click', () => {
     const t = board().tasks.find((x) => x.id === editingId);
     if (!t || !confirm(`¿Eliminar la tarea "${t.title}"?`)) return;
-    board().tasks = board().tasks.filter((x) => x.id !== editingId);
-    save();
+    board().tasks = board().tasks.filter((x) => x.id !== t.id);
+    persist(backend.deleteTask(t.id));
     taskDialog.close();
     render();
   });
@@ -526,8 +552,9 @@
           onchange: (e) => {
             const name = e.target.value.trim();
             if (!name) { e.target.value = m.name; return; }
+            if (name === m.name) return;
             m.name = name;
-            save();
+            persist(backend.updateMember(m.id, { name }));
             renderMemberList();
             render();
           },
@@ -550,7 +577,7 @@
     board().members = board().members.filter((x) => x.id !== m.id);
     board().tasks.forEach((t) => { if (t.assigneeId === m.id) t.assigneeId = ''; });
     if (filters.member === m.id) filters.member = '';
-    save();
+    persist(backend.deleteMember(m.id));
     renderMemberList();
     render();
   }
@@ -561,9 +588,10 @@
     if (!name) return;
     const used = board().members.map((m) => m.color);
     const color = MEMBER_COLORS.find((c) => !used.includes(c)) || MEMBER_COLORS[board().members.length % MEMBER_COLORS.length];
-    board().members.push({ id: Store.uid(), name, color });
+    const member = { id: Store.uid(), name, color, isMe: false };
+    board().members.push(member);
     input.value = '';
-    save();
+    persist(backend.insertMember(ui.activeBoard, member));
     renderMemberList();
     render();
     input.focus();
@@ -607,12 +635,219 @@
   $$('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey && !document.querySelector('dialog[open]')
+    if (e.key === 'n' && boards && !$('#app-shell').hidden && !e.ctrlKey && !e.metaKey && !e.altKey && !document.querySelector('dialog[open]')
       && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
       e.preventDefault();
       openTaskDialog(null);
     }
   });
 
-  render();
+  // ---------- Carga de datos ----------
+
+  function showScreen(name) {
+    $('#loading').hidden = name !== 'loading';
+    $('#auth-screen').hidden = name !== 'auth';
+    $('#app-shell').hidden = name !== 'app';
+  }
+
+  function showLoadError(err) {
+    console.error(err);
+    const box = $('#loading');
+    box.replaceChildren(
+      el('p', { text: 'No se han podido cargar tus tareas.' }),
+      el('p', { class: 'hint', text: err && err.message ? err.message : String(err) }),
+      el('button', { class: 'btn btn-primary', type: 'button', onclick: () => location.reload() }, ['Reintentar']),
+    );
+    showScreen('loading');
+  }
+
+  async function startApp(user) {
+    currentUser = user;
+    $('#loading').textContent = 'Cargando tus tareas…';
+    showScreen('loading');
+    try {
+      boards = await backend.loadBoards();
+    } catch (err) {
+      showLoadError(err);
+      return;
+    }
+    // Si mientras tanto se abrió un enlace de cambio de contraseña, esperar a ese paso.
+    if (recovering) return;
+    $('#user-menu').hidden = !user;
+    $('#user-email').textContent = user ? user.email : '';
+    $('#local-banner').hidden = backend.mode !== 'local';
+    showScreen('app');
+    render();
+  }
+
+  // Vuelve a leer los datos (al volver a la pestaña o tras un error).
+  let refreshing = false;
+  async function refresh() {
+    if (!boards || refreshing) return;
+    refreshing = true;
+    try {
+      boards = await backend.loadBoards();
+      render();
+      if (!membersDialog.open) return;
+      renderMemberList();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      refreshing = false;
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !taskDialog.open) refresh();
+  });
+
+  // ---------- Inicio de sesión ----------
+
+  const authForm = $('#auth-form');
+  let authMode = 'login';
+  let recovering = false;
+
+  const AUTH_MODES = {
+    login: {
+      title: 'Iniciar sesión', hint: 'Entra para ver tus tareas desde cualquier dispositivo.',
+      submit: 'Entrar', password: 'Contraseña', switchText: '¿No tienes cuenta? Crear una', switchTo: 'signup',
+    },
+    signup: {
+      title: 'Crear cuenta', hint: 'Tus tareas quedarán guardadas en tu cuenta.',
+      submit: 'Crear cuenta', password: 'Contraseña (mínimo 6 caracteres)', switchText: '¿Ya tienes cuenta? Inicia sesión', switchTo: 'login',
+    },
+    reset: {
+      title: 'Recuperar contraseña', hint: 'Te enviaremos un enlace para elegir una contraseña nueva.',
+      submit: 'Enviar enlace', switchText: 'Volver a iniciar sesión', switchTo: 'login',
+    },
+    recovery: {
+      title: 'Nueva contraseña', hint: 'Escribe la contraseña nueva para tu cuenta.',
+      submit: 'Guardar contraseña', password: 'Nueva contraseña (mínimo 6 caracteres)',
+    },
+  };
+
+  function showAuth(mode, message) {
+    authMode = mode;
+    const cfg = AUTH_MODES[mode];
+    const f = authForm.elements;
+    $('#auth-title').textContent = cfg.title;
+    $('#auth-hint').textContent = cfg.hint;
+    $('#auth-submit').textContent = cfg.submit;
+    $('#auth-email-field').hidden = mode === 'recovery';
+    $('#auth-password-field').hidden = !cfg.password;
+    if (cfg.password) $('#auth-password-label').textContent = cfg.password;
+    f.password.autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+    f.password.value = '';
+    $('#auth-switch').hidden = !cfg.switchTo;
+    $('#auth-switch').textContent = cfg.switchText || '';
+    $('#auth-forgot').hidden = mode !== 'login';
+    setAuthMessage(message || '');
+    showScreen('auth');
+    (mode === 'recovery' ? f.password : f.email).focus();
+  }
+
+  function setAuthMessage(text, ok) {
+    const node = $('#auth-message');
+    node.textContent = text;
+    node.hidden = !text;
+    node.classList.toggle('ok', !!ok);
+  }
+
+  function authErrorText(err) {
+    const msg = (err && err.message) || '';
+    if (/invalid login credentials/i.test(msg)) return 'Email o contraseña incorrectos.';
+    if (/email not confirmed/i.test(msg)) return 'Tienes que confirmar tu email antes de entrar. Revisa tu correo.';
+    if (/already registered|already exists/i.test(msg)) return 'Ya existe una cuenta con ese email.';
+    if (/password should be at least/i.test(msg)) return 'La contraseña debe tener al menos 6 caracteres.';
+    if (/rate limit|too many/i.test(msg)) return 'Demasiados intentos. Espera unos minutos y vuelve a probar.';
+    if (/failed to fetch|network/i.test(msg)) return 'No hay conexión con el servidor. Revisa tu conexión a internet.';
+    return msg || 'Ha ocurrido un error. Inténtalo de nuevo.';
+  }
+
+  $('#auth-switch').addEventListener('click', () => showAuth(AUTH_MODES[authMode].switchTo));
+  $('#auth-forgot').addEventListener('click', () => {
+    const email = authForm.elements.email.value;
+    showAuth('reset');
+    authForm.elements.email.value = email;
+  });
+
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = authForm.elements;
+    const email = f.email.value.trim();
+    const password = f.password.value;
+    if (authMode !== 'recovery' && !email) { setAuthMessage('Escribe tu email.'); f.email.focus(); return; }
+    if (AUTH_MODES[authMode].password && password.length < 6) {
+      setAuthMessage('La contraseña debe tener al menos 6 caracteres.');
+      f.password.focus();
+      return;
+    }
+    const button = $('#auth-submit');
+    button.disabled = true;
+    setAuthMessage('');
+    try {
+      if (authMode === 'login') {
+        await backend.signIn(email, password);
+      } else if (authMode === 'signup') {
+        const { needsConfirmation } = await backend.signUp(email, password);
+        if (needsConfirmation) {
+          showAuth('login', '');
+          f.email.value = email;
+          setAuthMessage('Cuenta creada. Te hemos enviado un email: abre el enlace para confirmarla y después inicia sesión.', true);
+        }
+      } else if (authMode === 'reset') {
+        await backend.resetPassword(email);
+        setAuthMessage('Si existe una cuenta con ese email, recibirás un enlace para cambiar la contraseña.', true);
+      } else if (authMode === 'recovery') {
+        await backend.updatePassword(password);
+        recovering = false;
+        history.replaceState(null, '', location.pathname);
+        startApp(await backend.getUser());
+      }
+    } catch (err) {
+      setAuthMessage(authErrorText(err));
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $('#btn-logout').addEventListener('click', async () => {
+    try {
+      await backend.signOut();
+    } catch (err) {
+      console.error(err);
+    }
+    currentUser = null;
+    boards = null;
+    showAuth('login');
+  });
+
+  function handleAuthChange(event, user) {
+    if (event === 'PASSWORD_RECOVERY') {
+      recovering = true;
+      showAuth('recovery');
+      return;
+    }
+    if (recovering) return;
+    if (user) {
+      if (!currentUser || currentUser.id !== user.id) startApp(user);
+    } else if (event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
+      currentUser = null;
+      boards = null;
+      if (authMode === 'login' || $('#auth-screen').hidden) showAuth('login');
+    }
+  }
+
+  try {
+    backend = Store.createBackend();
+  } catch (err) {
+    showLoadError(err);
+    return;
+  }
+  if (backend.mode === 'supabase') {
+    // Supabase recomienda no llamar a otros métodos dentro del callback.
+    backend.onAuthChange((event, user) => setTimeout(() => handleAuthChange(event, user), 0));
+  } else {
+    startApp(null);
+  }
 })();
